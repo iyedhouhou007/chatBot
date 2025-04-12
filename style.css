@@ -1,0 +1,73 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #121212; /* Dark background */
+  color: #ffffff; /* Light text color */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+#chat {
+  max-width: 600px;
+  width: 90%;
+  margin: 20px auto;
+  background: #1e1e1e; /* Darker chat background */
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3); /* Adjusted shadow for dark mode */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  border-radius: 20px;
+  clear: both;
+}
+
+.bot {
+  background: #212121; /* Darker bot background */
+  color: #bbdefb; /* Light blue text for bot */
+  align-self: flex-start;
+  float: left;
+}
+
+.user {
+  background: #2e7d32; /* Darker green background */
+  color: #b9f6ca; /* Light green text for user */
+  align-self: flex-end;
+  float: right;
+  padding: 5px 10px;
+  border-radius: 10px;
+}
+
+#userInput {
+  max-width: 1000px;
+  width: 100%;
+  padding: 12px;
+  margin-top: 15px;
+  border: 1px solid #546e7a; /* Darker border */
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+  background: #272727; /* Dark input background */
+  color: #ffffff; /* Light input text */
+}
+
+#userInput:focus {
+  outline: none;
+  border-color: #64b5f6;
+  box-shadow: 0 0 5px #64b5f6;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #ffffff; /* Light heading text */
+}
