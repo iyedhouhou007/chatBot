@@ -42,7 +42,6 @@ function traceToAskableFacts(fact, visited = new Set()) {
   visited.add(fact);
 
   if (visited.size > 20) {
-    console.warn("Possible circular dependency detected in rules");
     return [];
   }
 
@@ -57,7 +56,10 @@ function traceToAskableFacts(fact, visited = new Set()) {
 function addMessage(msg, sender = "bot") {
   const div = document.createElement("div");
   div.className = sender;
-  div.innerText = sender === "bot" ? `🤖 ${msg}` : `👤 ${msg}`;
+  div.innerHTML =
+    sender === "bot"
+      ? `<span class="name-sender">BOT:</span> ${msg}`
+      : `<span class="name-sender">USER:</span> ${msg}`;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 }
@@ -118,7 +120,10 @@ function extractFacts(input) {
   const extracted = [];
   const lowerCaseInput = input.toLowerCase();
 
-  if (lowerCaseInput.includes("reset") || lowerCaseInput.includes("start over")) {
+  if (
+    lowerCaseInput.includes("reset") ||
+    lowerCaseInput.includes("start over")
+  ) {
     resetSystem();
     return ["system reset"];
   }
@@ -246,7 +251,9 @@ function resetSystem() {
   awaitingQuestion = null;
   askedQuestions.clear();
   askableQueue = [];
-  addMessage("System has been reset. What would you like to know about the weather?");
+  addMessage(
+    "System has been reset. What would you like to know about the weather?"
+  );
 }
 
 function askFollowUp() {
@@ -275,12 +282,17 @@ function askFollowUp() {
     }
   }
 
-  if (askableQueue.length === 0 && awaitingQuestion === null && currentGoal === null) {
+  if (
+    askableQueue.length === 0 &&
+    awaitingQuestion === null &&
+    currentGoal === null
+  ) {
     if (facts.length > 0) {
-      const lastConclusion = facts[facts.length - 1];
-       addMessage(
-         `That's all I can deduce. My final conclusion is: "${lastConclusion}"`
-       );
+      addMessage(
+        `That's all I can deduce. My final conclusion is: "${
+          facts[facts.length - 1]
+        }"`
+      );
     } else {
       addMessage(
         "I cannot determine anything further with the provided information."
@@ -288,16 +300,18 @@ function askFollowUp() {
     }
     return;
   }
-   if (askableQueue.length === 0 && awaitingQuestion === null && currentGoal !== null) {
-        checkGoalStatus();
-        return;
-   }
+  if (
+    askableQueue.length === 0 &&
+    awaitingQuestion === null &&
+    currentGoal !== null
+  ) {
+    checkGoalStatus();
+    return;
+  }
 
-
-   if (awaitingQuestion === null && currentGoal === null) {
-      addMessage("No further conclusions can be made.");
-   }
-
+  if (awaitingQuestion === null && currentGoal === null) {
+    addMessage("No further conclusions can be made.");
+  }
 }
 
 function inferFromNegation(deniedFact) {
@@ -305,17 +319,13 @@ function inferFromNegation(deniedFact) {
 
   if (oppositeFact && !facts.includes(oppositeFact)) {
     facts.push(oppositeFact);
-    addMessage(`I understand that "${oppositeFact}" since you denied "${deniedFact}".`);
+    addMessage(
+      `I understand that "${oppositeFact}" since you denied "${deniedFact}".`
+    );
     return true;
   }
 
   return false;
-}
-
-function handleEnter(e) {
-  if (e.key === "Enter") {
-    processUserInput();
-  }
 }
 
 const conclusionMap = {};
@@ -348,7 +358,9 @@ function handleQuestion(question) {
   const neededFacts = findFactsNeededForGoal(goal);
 
   if (neededFacts.length === 0) {
-    addMessage(`I don't have enough information to determine if ${goal} is true.`);
+    addMessage(
+      `I don't have enough information to determine if ${goal} is true.`
+    );
     currentGoal = null;
     return;
   }
@@ -358,17 +370,62 @@ function handleQuestion(question) {
 }
 
 function findGoalInQuestion(question) {
+  const lowerQuestion = question.toLowerCase();
+
+  const cleanQuestion = lowerQuestion
+    .replace(/is there|will it|is it|are there|does it|can it|would it/g, "")
+    .replace(/\?/g, "")
+    .trim();
+
   for (let rule of rules) {
-    if (question.toLowerCase().includes(rule.conclusion.toLowerCase())) {
+    const conclusion = rule.conclusion.toLowerCase();
+    if (lowerQuestion.includes(conclusion)) {
+      return rule.conclusion;
+    }
+
+    const simplifiedConclusion = conclusion
+      .replace(/is|are|will|there|it|a|be|the|probably|chance of/g, "")
+      .trim();
+
+    if (cleanQuestion.includes(simplifiedConclusion)) {
       return rule.conclusion;
     }
   }
 
   for (let rule of rules) {
-    for (let cond of rule.condition) {
-      if (question.toLowerCase().includes(cond.toLowerCase())) {
-        return cond;
+    for (let condition of rule.condition) {
+      const conditionLower = condition.toLowerCase();
+      if (lowerQuestion.includes(conditionLower)) {
+        return condition;
       }
+
+      const simplifiedCondition = conditionLower
+        .replace(/is|are|will|there|it|a|be|the|probably|chance of/g, "")
+        .trim();
+
+      if (cleanQuestion.includes(simplifiedCondition)) {
+        return condition;
+      }
+    }
+  }
+
+  const keywords = [
+    { keyword: "snow", goal: "it will probably snow" },
+    { keyword: "rain", goal: "it will probably rain" },
+    { keyword: "storm", goal: "there is a chance of a storm" },
+    { keyword: "heatwave", goal: "there is a chance of a heatwave" },
+    { keyword: "flooding", goal: "there is a risk of flooding" },
+    { keyword: "hot", goal: "it is hot" },
+    { keyword: "cold", goal: "it is cold" },
+    { keyword: "temperature high", goal: "temperature is high" },
+    { keyword: "temperature low", goal: "temperature is low" },
+    { keyword: "cloudy", goal: "sky is cloudy" },
+    { keyword: "wind", goal: "wind is strong" },
+  ];
+
+  for (let item of keywords) {
+    if (lowerQuestion.includes(item.keyword)) {
+      return item.goal;
     }
   }
 
@@ -385,26 +442,47 @@ function findFactsNeededForGoal(goal) {
   }
 
   if (isBasicFact) {
-    if (!facts.includes(goal) && !askedQuestions.has(goal)) {
-       return [goal];
-    } else {
-       return [];
+    return [goal];
+  }
+
+  const allNeededFacts = [];
+
+  const relevantRules = rules.filter((rule) => rule.conclusion === goal);
+
+  let bestRule = null;
+  let bestRuleKnownConditions = -1;
+
+  for (let rule of relevantRules) {
+    const knownConditions = rule.condition.filter((c) =>
+      facts.includes(c)
+    ).length;
+    if (knownConditions > bestRuleKnownConditions) {
+      bestRuleKnownConditions = knownConditions;
+      bestRule = rule;
     }
   }
 
-  const relevantRules = rules.filter(rule => rule.conclusion === goal);
+  if (bestRule) {
+    for (let condition of bestRule.condition) {
+      if (facts.includes(condition)) {
+        continue;
+      }
 
-  const neededFacts = [];
+      const primitiveFactsForCondition = traceToAskableFacts(condition);
 
-  for (let rule of relevantRules) {
-    for (let condition of rule.condition) {
-      if (!facts.includes(condition) && !neededFacts.includes(condition) && !askedQuestions.has(condition)) {
-        neededFacts.push(condition);
+      for (let fact of primitiveFactsForCondition) {
+        if (
+          !facts.includes(fact) &&
+          !allNeededFacts.includes(fact) &&
+          !askedQuestions.has(fact)
+        ) {
+          allNeededFacts.push(fact);
+        }
       }
     }
   }
 
-  return neededFacts;
+  return allNeededFacts;
 }
 
 function askNextBackwardQuestion() {
@@ -415,11 +493,14 @@ function askNextBackwardQuestion() {
 
   const nextQuestion = backwardQueue.shift();
 
-  if (facts.includes(nextQuestion) || askedQuestions.has(nextQuestion) || isOppositeAskedOrKnown(nextQuestion) ) {
-       askNextBackwardQuestion(); // Skip if already known/asked/opposite known
-       return;
+  if (
+    facts.includes(nextQuestion) ||
+    askedQuestions.has(nextQuestion) ||
+    isOppositeAskedOrKnown(nextQuestion)
+  ) {
+    askNextBackwardQuestion();
+    return;
   }
-
 
   awaitingQuestion = nextQuestion;
   addMessage(`Is it true that "${nextQuestion}"? (yes/no)`);
@@ -430,17 +511,41 @@ function checkGoalStatus() {
   deduceFacts();
 
   if (facts.includes(currentGoal)) {
-    addMessage(`Based on what you've told me, yes, ${currentGoal}.`);
+    const simplifiedGoal = currentGoal
+      .replace("there is a chance of", "expect")
+      .replace("there is a risk of", "watch out for")
+      .replace("it will probably", "it will")
+      .replace("it is", "it's");
+
+    addMessage(`Yes, ${simplifiedGoal}.`);
   } else {
-    const moreFactsNeeded = findFactsNeededForGoal(currentGoal);
+    const oppositeGoal = getOppositeFact(currentGoal);
+    if (oppositeGoal && facts.includes(oppositeGoal)) {
+      const negatedGoal = currentGoal
+        .replace("there is a chance of", "no chance of")
+        .replace("there is a risk of", "no risk of")
+        .replace("it will probably", "it won't")
+        .replace("it is", "it's not");
 
-    if (moreFactsNeeded.length > 0) {
-      backwardQueue = [...moreFactsNeeded];
-      askNextBackwardQuestion();
-      return;
+      addMessage(`No, ${negatedGoal}.`);
+    } else {
+      const moreFactsNeeded = findFactsNeededForGoal(currentGoal);
+
+      if (moreFactsNeeded.length > 0) {
+        backwardQueue = [...moreFactsNeeded];
+        askNextBackwardQuestion();
+        return;
+      }
+
+      const simplifiedGoal = currentGoal
+        .replace("there is a", "")
+        .replace("it will probably", "")
+        .replace("it is", "");
+
+      addMessage(
+        `No, ${simplifiedGoal.trim()} is not expected with the current conditions.`
+      );
     }
-
-    addMessage(`Based on what you've told me, I cannot determine if ${currentGoal} is true.`);
   }
 
   currentGoal = null;
@@ -453,7 +558,10 @@ function processUserInput() {
   addMessage(userText, "user");
   input.value = "";
 
-  if (userText.toLowerCase() === "reset" || userText.toLowerCase() === "start over") {
+  if (
+    userText.toLowerCase() === "reset" ||
+    userText.toLowerCase() === "start over"
+  ) {
     resetSystem();
     return;
   }
@@ -473,20 +581,35 @@ function processUserInput() {
 
     if (currentGoal) {
       deduceFacts();
-      setTimeout(checkGoalStatus, 500); // In backward chaining, check goal after answering a question
+      setTimeout(checkGoalStatus, 500);
     } else {
       deduceFacts();
-      setTimeout(askFollowUp, 500); // In forward chaining, ask next follow up question
+      setTimeout(askFollowUp, 500);
     }
-  } else if (userText.includes("?") ||
-             userText.toLowerCase().startsWith("is") ||
-             userText.toLowerCase().startsWith("will") ||
-             userText.toLowerCase().startsWith("are")) {
-    handleQuestion(userText);
   } else {
+    const isQuestion =
+      userText.includes("?") ||
+      userText
+        .toLowerCase()
+        .match(/^(is|are|will|can|does|would|should|has|have|do)/);
+
+    if (isQuestion) {
+      const goal = findGoalInQuestion(userText);
+
+      if (goal) {
+        handleQuestion(goal);
+        return;
+      } else {
+        addMessage(
+          "I'm not sure what you're asking about. Try asking about weather conditions like rain, snow, storms, or temperature."
+        );
+        return;
+      }
+    }
+
     const extractedFacts = extractFacts(userText);
 
-    extractedFacts.forEach(fact => {
+    extractedFacts.forEach((fact) => {
       if (!facts.includes(fact)) {
         facts.push(fact);
       }
@@ -509,4 +632,12 @@ if (resetButton) {
   resetButton.addEventListener("click", resetSystem);
 }
 
-addMessage("Hello! I can help predict the weather based on your inputs. What's the weather like today?");
+function handleEnter(e) {
+  if (e.key === "Enter") {
+    processUserInput();
+  }
+}
+
+addMessage(
+  "Hello! I can help predict the weather based on your inputs. What's the weather like today?"
+);

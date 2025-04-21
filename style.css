@@ -43,8 +43,12 @@ body {
   max-width: 80%;
 }
 
+.name-sender {
+  color: red;
+}
+
 .user {
-  background: #2e7d32; /* Darker green background */
+  background: #2e357d; /* Darker green background */
   color: #b9f6ca; /* Light green text for user */
   align-self: flex-end;
   margin-bottom: 15px;
